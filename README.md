@@ -1,10 +1,18 @@
 # Code Generator
 
-A non-interactive CLI coding agent that takes a precise Markdown implementation plan and works autonomously until its acceptance criteria pass or an explicit stopping condition occurs. It records evidence, streams progress, and saves state so a person or automated process can inspect and resume the work.
+A focused implementation worker that a more capable agent directs through a CLI. The directing agent handles discovery, ideation, planning, and review; Code Generator takes its precise Markdown plan and implements code autonomously until the acceptance criteria pass or an explicit stopping condition occurs. It records evidence and durable state so the directing agent can monitor progress, resolve blockers, and resume execution from any harness with process access.
 
 Designed for real coding tasks on a dedicated Mac Studio M3 Ultra using local open-weight models served by rapid-mlx. Other model servers can be configured if they support the required OpenAI-compatible API capabilities.
 
 **Status: v1 is implemented and validated locally against rapid-mlx.** The package has not been published to npm. See [implementation progress](IMPLEMENTATION.md) for milestone and verification details.
+
+## Delegation from any harness
+
+The [companion skill](skills/code-generator/SKILL.md) teaches a directing model to author plans, launch bounded runs, monitor JSON status, resolve blockers, resume, and review evidence. It ships in the npm tarball under `skills/code-generator/`. Load that file directly or copy the folder into your directing harness's skill directory. Keep access to the installed package's `PLAN_TEMPLATE.md`; the skill uses it as the authoritative plan format. No Codex-specific API or built-in orchestration service is required.
+
+This companion skill is for the **directing model**. The worker separately discovers implementation skills only inside its target repository's `.agents/skills/`. Installing the companion skill does not expand the worker's skill roots or give it recursive delegation.
+
+The CLI is the integration boundary: launch a process, retain the run ID, query `status`/`inspect`, and consume terminal reports. Planning and intent-changing decisions stay with the director; routine implementation decisions stay with the worker. Successful execution produces reviewable changes, not automatic publication or merging.
 
 ## Local setup
 

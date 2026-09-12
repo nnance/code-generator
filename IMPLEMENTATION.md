@@ -1,6 +1,6 @@
 # Implementation and verification
 
-The v1 CLI is implemented locally. The initial documents and each implementation milestone are committed separately. No package has been published and no remote repository has been configured.
+The v1 CLI is implemented locally. The initial documents and each implementation milestone are committed separately. The public repository is https://github.com/nnance/code-generator. The package has not been published to npm.
 
 ## Milestones
 
@@ -25,7 +25,7 @@ The v1 CLI is implemented locally. The initial documents and each implementation
 
 ## Checks
 
-The component suite contains 13 passing tests covering plan/config validation, partial or corrupt journals, retained token reservations, overlapping locks, supervised command recovery, test-environment isolation, command restrictions, recursive globs, and local skill discovery.
+The original component suite contained 13 passing tests covering plan/config validation, partial or corrupt journals, retained token reservations, overlapping locks, supervised command recovery, test-environment isolation, command restrictions, recursive globs, and local skill discovery.
 
 The seven live E2E scenarios cover:
 
@@ -64,3 +64,21 @@ Diagnostic run data stays in temporary fixture directories. `.test-artifacts/` c
 The default model is now `qwen3.8-27b-4bit` at the same port 8001. Its canonical server ID is `rapid-mlx/Qwen3.8-27B-4bit-MTP-MLX`; the advertised context remains 262144 tokens. The full v1 results above describe the original Qwen3.6 validation, not a full rerun on Qwen3.8.
 
 The live Qwen3.8 connectivity check passed: streaming native tool calls, input/output usage, and observed prefix-cache reuse. The TypeScript build also passed.
+
+
+## Harness-neutral delegation (2026-09-12)
+
+PR #1 merged the agent-generated `--version` feature; its worktree and merged branches were removed. The component suite now passes 18 tests.
+
+The companion skill at `skills/code-generator/SKILL.md` defines the directing model's plan/run/monitor/resolve/resume/review workflow and ships in the npm tarball. The spec and README distinguish that role from the implementation worker. The skill validator passed, and `npm pack` included the skill alongside the authoritative plan template.
+
+A live Qwen3.8 run (`bc60778a-7680-435e-ad2a-07fb5804ea6a`) exercised the documented CLI workflow in an isolated temporary fixture. The test harness supplied director actions while Codex supervised status and evidence. The worker stopped at assessment for the missing contract prerequisite; after the harness supplied the contract and explicit resume instructions, the same run completed. Read-only monitoring, retained original plan identity, an amendment, cumulative tokens/time, unchanged acceptance criteria, preserved test code, and independently correct addition were verified. This validates the CLI delegation mechanics; it is not a benchmark of autonomous director model quality.
+
+Reproduce with a live rapid-mlx server:
+
+```sh
+npm run build
+node --test test/e2e/delegation.test.mjs
+```
+
+Local run evidence is indexed by `.test-artifacts/delegation.json` (ignored by Git); the temporary central state retains full reports and model/tool output. All model calls used the actual server, with no mock or replay.

@@ -8,6 +8,7 @@
   },
   "files": [
     "dist",
+    "skills",
     "PLAN_TEMPLATE.md",
     "PRODUCT_SPEC.md",
     "IMPLEMENTATION.md",

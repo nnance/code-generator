@@ -4,11 +4,21 @@ Status: v1 product baseline. The local CLI is implemented; see [IMPLEMENTATION.m
 
 ## 1. Purpose and user
 
-Code Generator is a non-interactive CLI coding agent. It accepts a precise implementation plan in Markdown, operates autonomously in an existing local directory, and stops only when the plan's completion requirements are satisfied or an explicit stopping condition occurs. It reports evidence of its work and maintains durable state so a person or automated monitor can inspect and resume it with updated instructions.
+Code Generator is a non-interactive CLI implementation worker, designed primarily to be directed by a more capable model through any harness that can execute local processes. It accepts a precise implementation plan in Markdown, operates autonomously in an existing local directory, and stops only when the plan's completion requirements are satisfied or an explicit stopping condition occurs. It reports evidence of its work and maintains durable state so a person or automated monitor can inspect and resume it with updated instructions.
 
 The first user is the project owner, running real coding tasks on a dedicated or mostly dedicated Mac Studio M3 Ultra. The primary inference backend is a live rapid-mlx server serving a local open-weight model. Other servers exposing the required OpenAI-compatible API capabilities are supported through configuration.
 
 Implementation: Node.js and TypeScript, runnable through `npx`. Use the Vercel AI SDK for model connectivity, streaming, tools, and its agent loop. Prefer Node built-ins; add dependencies only where they provide substantial value. The implementation repository is `genai/code-generator`.
+
+### Directing-agent and worker boundary
+
+The directing agent owns ideation, product and repository discovery before delegation, architecture, implementation plan generation, monitoring, resolution of intent or scope decisions, and final review. The worker owns repository inspection necessary to execute that plan, ordinary coding decisions, edits, prescribed checks, routine error repair, and durable evidence. It escalates material ambiguity or unavailable prerequisites by stopping with a precise explanation, rather than conducting open-ended discovery or choosing product requirements.
+
+A harness-neutral companion skill ships at `skills/code-generator/SKILL.md`. It documents executable discovery, the plan template, bounded process invocation, run ID retention, JSON monitoring, status versus process exit semantics, blocker resolution, cumulative budgets, resume amendments, and review of actual target changes and evidence. A directing harness can load this skill without any Codex-specific integration. This is distinct from the worker's repository-local implementation skills and does not introduce nested agents inside a run.
+
+The supported delegation cycle is: director writes plan → worker implements → director monitors → worker reports blocker or completion → director resolves and resumes or reviews and integrates. Run IDs, structured status, stable exit codes, saved state, and artifact references form the integration contract. Existing permissions and explicit delivery scope apply throughout; implementation success does not authorize publication.
+
+Acceptance for this workflow includes a live rapid-mlx run that stops for a missing prerequisite, read-only monitoring of its stored state, a director-provided resolution, resumption of the same run with retained accounting, and independent verification of the resulting code and preserved checks. No mocked model server substitutes for this validation.
 
 ## 2. Scope
 
