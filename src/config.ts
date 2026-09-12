@@ -13,7 +13,7 @@ export const configSchema = z.object({
   maxTimeMs: z.number().positive().nullable().default(3_600_000),
   maxTokens: z.number().int().positive().nullable().default(null),
   contextTokens: z.number().int().positive().default(262144),
-  maxOutputTokens: z.number().int().positive().default(4096),
+  maxOutputTokens: z.number().int().positive().default(16384),
   compactionThreshold: z.number().min(0.1).max(0.95).default(0.8),
   commandTimeoutMs: z.number().positive().default(120000),
   apiTimeoutMs: z.number().positive().default(300000),

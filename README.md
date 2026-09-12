@@ -83,7 +83,9 @@ Every run requires at least one finite positive time or token limit. Configured 
 - Tokens count input and output across model calls, including compaction and cached input tokens.
 - Resume retains consumption. `--max-time 2h` sets the total allowance to two hours; it does not add two hours. An exhausted run requires an explicit increase.
 
-**Token reservation:** token-limited requests currently reserve the server-advertised full context plus an output allowance, then reconcile to actual usage. With this model, allow more than 266,240 remaining tokens for the default 4,096-token output allowance. A smaller remaining allowance can stop the run before a request even when the eventual prompt would be shorter. Time-only operation avoids this conservative reservation requirement.
+The default `maxOutputTokens` is 16,384 per response, including plan assessment, to leave room for local model reasoning and tool calls. Raise it in configuration for models that need longer responses; this is a ceiling, not a requirement to generate that many tokens.
+
+**Token reservation:** token-limited requests currently reserve the server-advertised full context plus an output allowance, then reconcile to actual usage. With this model, allow more than 278,528 remaining tokens for the default 16,384-token output allowance. A smaller remaining allowance can stop the run before a request even when the eventual prompt would be shorter. Time-only operation avoids this conservative reservation requirement.
 
 Run history and full output is stored centrally under `~/.code-generator/runs/<run-id>/`, with owner-only permissions. Application-generated logs exclude credentials, although captured command output may contain secrets printed by those commands.
 

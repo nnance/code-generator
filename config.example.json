@@ -3,7 +3,7 @@
   "baseURL": "http://127.0.0.1:8001/v1",
   "model": "qwen3.8-27b-4bit",
   "contextTokens": 262144,
-  "maxOutputTokens": 4096,
+  "maxOutputTokens": 16384,
   "maxTimeMs": 3600000,
   "maxTokens": null,
   "stateDir": "~/.code-generator",
