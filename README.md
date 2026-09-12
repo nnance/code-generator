@@ -1,22 +1,34 @@
 # Code Generator
 
-A focused implementation worker that a more capable agent directs through a CLI. The directing agent handles discovery, ideation, planning, and review; Code Generator takes its precise Markdown plan and implements code autonomously until the acceptance criteria pass or an explicit stopping condition occurs. It records evidence and durable state so the directing agent can monitor progress, resolve blockers, and resume execution from any harness with process access.
+Draft a specification. Run the CLI. Review the implementation.
 
-Designed for real coding tasks on a dedicated Mac Studio M3 Ultra using local open-weight models served by rapid-mlx. Other model servers can be configured if they support the required OpenAI-compatible API capabilities.
+Code Generator is a non-interactive coding agent that turns a precise Markdown implementation plan into working code. It edits files, runs checks, and works autonomously until the plan's acceptance criteria pass or it encounters a blocker. Progress, evidence, and state are saved so you can inspect the result and resume with updated instructions.
+
+Use it directly from your terminal, delegate work from another agent, or integrate it into scripts and automation. You decide what to build; Code Generator handles implementation.
+
+Built with Node.js, TypeScript, and the **Vercel AI SDK** for model connectivity, streaming, tools, and the agent loop. It supports local models and hosted APIs through configurable OpenAI-compatible endpoints. The current CLI uses the SDK's OpenAI-compatible adapter; additional native SDK provider integrations are not yet exposed.
 
 **Status: v1 is implemented and validated locally against rapid-mlx.** The package has not been published to npm. See [implementation progress](IMPLEMENTATION.md) for milestone and verification details.
 
-## Delegation from any harness
+## Ways to use it
+
+- **From your terminal:** write a specification using the plan template, launch the CLI, and review the code and verification results. If it stops, provide clarification and resume.
+- **With another agent:** let your preferred agent help discover requirements, draft plans, monitor implementation, and review changes using the companion skill.
+- **In scripts and automation:** launch bounded jobs, consume JSON events and stable exit codes, and retain run IDs for monitoring and recovery.
+
+The same plan-driven workflow supports each approach. Planning can happen in an editor, a conversation, or an automated system; execution uses a repeatable CLI interface.
+
+## Agent integration
 
 The [companion skill](skills/code-generator/SKILL.md) teaches a directing model to author plans, launch bounded runs, monitor JSON status, resolve blockers, resume, and review evidence. It ships in the npm tarball under `skills/code-generator/`. Load that file directly or copy the folder into your directing harness's skill directory. Keep access to the installed package's `PLAN_TEMPLATE.md`; the skill uses it as the authoritative plan format. No Codex-specific API or built-in orchestration service is required.
 
 This companion skill is for the **directing model**. The worker separately discovers implementation skills only inside its target repository's `.agents/skills/`. Installing the companion skill does not expand the worker's skill roots or give it recursive delegation.
 
-The CLI is the integration boundary: launch a process, retain the run ID, query `status`/`inspect`, and consume terminal reports. Planning and intent-changing decisions stay with the director; routine implementation decisions stay with the worker. Successful execution produces reviewable changes, not automatic publication or merging.
+The CLI is the integration boundary: launch a process, retain the run ID, query `status`/`inspect`, and consume terminal reports. The calling person, agent, or workflow owns the specification and scope decisions; Code Generator handles routine implementation decisions. Successful execution produces reviewable changes, not automatic publication or merging.
 
 ## Local setup
 
-Requires Node.js 22 or newer and an already-running model server. The defaults target `http://127.0.0.1:8001/v1`, model `qwen3.8-27b-4bit`, a 262,144-token context window, and one hour of active execution.
+Requires Node.js 22 or newer and access to a compatible local model server or hosted API. Configure `baseURL`, `model`, and `contextTokens` for your endpoint. The included local example defaults target `http://127.0.0.1:8001/v1`, model `qwen3.8-27b-4bit`, a 262,144-token context window, and one hour of active execution.
 
 ```sh
 npm ci
@@ -93,7 +105,7 @@ Every run requires at least one finite positive time or token limit. Configured 
 
 The default `maxOutputTokens` is 16,384 per response, including plan assessment, to leave room for local model reasoning and tool calls. Raise it in configuration for models that need longer responses; this is a ceiling, not a requirement to generate that many tokens.
 
-**Token reservation:** token-limited requests currently reserve the server-advertised full context plus an output allowance, then reconcile to actual usage. With this model, allow more than 278,528 remaining tokens for the default 16,384-token output allowance. A smaller remaining allowance can stop the run before a request even when the eventual prompt would be shorter. Time-only operation avoids this conservative reservation requirement.
+**Token reservation:** token-limited requests currently reserve the server-advertised full context plus an output allowance, then reconcile to actual usage. For example, a server advertising a 262,144-token context requires more than 278,528 remaining tokens with the default 16,384-token output allowance. A smaller remaining allowance can stop the run before a request even when the eventual prompt would be shorter. Time-only operation avoids this conservative reservation requirement.
 
 Run history and full output is stored centrally under `~/.code-generator/runs/<run-id>/`, with owner-only permissions. Application-generated logs exclude credentials, although captured command output may contain secrets printed by those commands.
 
