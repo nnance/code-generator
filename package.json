@@ -1,0 +1,32 @@
+{
+  "name": "@nicknance/code-generator",
+  "version": "0.1.0",
+  "description": "A resumable non-interactive coding agent for OpenAI-compatible local models",
+  "type": "module",
+  "bin": {
+    "code-generator": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "PLAN_TEMPLATE.md",
+    "PRODUCT_SPEC.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "test:e2e": "npm run build && node --test --test-concurrency=1 test/e2e/*.test.mjs",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@ai-sdk/openai-compatible": "3.0.44",
+    "ai": "7.0.90",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.30",
+    "typescript": "5.9.3"
+  }
+}
