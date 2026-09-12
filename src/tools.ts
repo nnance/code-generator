@@ -15,12 +15,16 @@ export class CodingTools {
   queue: Promise<unknown> = Promise.resolve();
   stop?: Stop;
   constructor(public store: Store, public budget: Budget) { this.processes = new Processes(store, budget); }
-  async action(name: string, input: unknown, fn: (id: string) => unknown | Promise<unknown>) {
+  async action<T extends object>(name: string, input: unknown, fn: (id: string) => T | Promise<T>) {
     const perform = async () => {
       this.budget.check(); if (this.stop) throw this.stop;
       const a = this.store.intent(name, input);
-      try { const output = await fn(a.id); this.store.complete(a, output); return { actionId: a.id, ...(output && typeof output === 'object' ? output : { output }) }; }
-      catch (e) { this.store.fail(a, e); if (e instanceof Stop) { this.stop = e; this.budget.controller.abort(e); } throw e; }
+      try { const output = await fn(a.id); this.store.complete(a, output); return { actionId: a.id, ...output }; }
+      catch (e) {
+        if ((name === 'shell' || name === 'write') && this.budget.controller.signal.aborted) { a.error = String(e); this.store.save(); }
+        else this.store.fail(a, e);
+        if (e instanceof Stop) { this.stop = e; this.budget.controller.abort(e); } throw e;
+      }
     };
     const result = this.queue.then(perform); this.queue = result.catch(() => {}); return result;
   }
@@ -73,12 +77,12 @@ export class CodingTools {
         const skill = skills(root).find(s => s.name === i.name); if (!skill) throw new Error('Unknown skill');
         const content = readFileSync(skill.path, 'utf8'); this.store.state.skills[skill.path] = hash(content); return { ...skill, content };
       }) }),
-      progress: tool({ description: 'Record step status and evidence action IDs. Completed steps must reference successful prior tool actions.', inputSchema: z.object({ step: z.string(), status: z.enum(['in_progress', 'completed', 'blocked']), explanation: z.string().min(1), actions: z.array(z.string()) }), execute: i => this.action('progress', i, () => {
+      progress: tool({ description: 'Record step status using its ID (for example S1, not its title) and evidence action IDs. Completed steps must reference successful prior tool actions.', inputSchema: z.object({ step: z.enum(Object.keys(this.store.state.steps) as [string, ...string[]]), status: z.enum(['in_progress', 'completed', 'blocked']), explanation: z.string().min(1), actions: z.array(z.string()) }), execute: i => this.action('progress', i, () => {
         const step = this.store.state.steps[i.step]; if (!step) throw new Error('Unknown plan step');
         if (i.status === 'completed' && (!i.actions.length || i.actions.some(id => this.store.state.actions[id]?.status !== 'done'))) throw new Error('Completion requires valid successful action IDs as evidence.');
         step.status = i.status; step.evidence = { explanation: i.explanation, actions: i.actions, revision: this.store.state.revision }; return { step: i.step, ...step };
       }) }),
-      blocked: tool({ description: 'Stop with an explanation when a decision, prerequisite, or ambiguity prevents safe progress.', inputSchema: z.object({ reason: z.string().min(1) }), execute: i => this.action('blocked', i, () => { throw new Stop('blocked', 'agent_blocker', i.reason); }) }),
+      blocked: tool({ description: 'Stop with an explanation when a decision, prerequisite, or ambiguity prevents safe progress.', inputSchema: z.object({ reason: z.string().min(1) }), execute: i => this.action<object>('blocked', i, () => { throw new Stop('blocked', 'agent_blocker', i.reason); }) }),
     };
   }
   async recover() {
@@ -95,7 +99,7 @@ export class CodingTools {
         const marker = join(this.store.dir, 'artifacts', a.id + '.start');
         if (!existsSync(marker)) { this.store.fail(a, 'Command never authorized to start; safe to retry.'); continue; }
       } else if (['read', 'list', 'grep', 'load_skill', 'progress', 'process'].includes(a.name)) { this.store.fail(a, 'Interrupted operation; safe to inspect again.'); continue; }
-      throw new Stop('blocked', 'uncertain_action', `Cannot determine outcome of ${a.name} action ${a.id}. Inspect retained output and resolve it explicitly before resume.`);
+      throw new Stop('blocked', 'uncertain_action', `Cannot determine outcome of ${a.name} action ${a.id}. Inspect retained output, then resume with --instructions 'Resolve action ${a.id} as applied: <evidence>' or 'Resolve action ${a.id} as not-applied: <evidence>'.`);
     }
     // Reject artifact paths that escaped storage if state was externally corrupted.
     for (const p of Object.values(this.store.state.processes)) if (!within(this.store.dir, p.resultFile)) throw new Stop('internal_error', 'state_corrupt', 'Process artifact path escaped run directory');

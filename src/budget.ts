@@ -43,6 +43,7 @@ export class Budget {
   }
   stop() {
     clearInterval(this.timer); clearTimeout(this.deadline);
+    for (const id of Object.keys(this.store.state.budget.reservations)) this.settle(id);
     const b = this.store.state.budget; b.activeMs += performance.now() - this.last; b.heartbeatReservedMs = 0; this.store.save();
   }
 }

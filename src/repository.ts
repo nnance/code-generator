@@ -9,8 +9,9 @@ export function within(root: string, path: string) { const rel = relative(root, 
 export function targetPath(root: string, path: string, allowMissing = false) {
   const full = resolve(root, path); let check = full;
   if (allowMissing) while (!existsSync(check) && dirname(check) !== check) check = dirname(check);
-  if (!within(realpathSync(root), realpathSync(check)) || !within(root, full)) throw new Stop('blocked', 'path_outside_target', `Path is outside target: ${path}`);
-  return full;
+  const canonical = resolve(realpathSync(check), relative(check, full));
+  if (!within(realpathSync(root), canonical)) throw new Stop('blocked', 'path_outside_target', `Path is outside target: ${path}`);
+  return canonical;
 }
 export function files(root: string, exclude = new Set(['.git', 'node_modules', '.code-generator'])): string[] {
   const out: string[] = [];

@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync, openSync, closeSync, fsyncSync, renameSync, existsSync, readdirSync, truncateSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, openSync, closeSync, fsyncSync, renameSync, existsSync, readdirSync, truncateSync, realpathSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { ModelMessage } from 'ai';
@@ -18,6 +18,7 @@ export interface RunState {
   budget: { activeMs: number; tokens: number; reservations: Record<string, number>; uncertainTokens: number; heartbeatReservedMs: number };
   initialGit?: unknown; instructions: Record<string, string>; skills: Record<string, string>;
   reason?: { code: string; message: string }; initialFiles?: Record<string, string>;
+  owner?: { pid: number; identity?: string };
 }
 export function atomicJSON(path: string, value: unknown) {
   const tmp = `${path}.${randomUUID()}.tmp`;
@@ -35,7 +36,7 @@ export class Store {
     const state: RunState = { version: 1, id, created: new Date().toISOString(), status: 'running', target, sourceTarget: target, config, plan, originalHash: plan.hash, revision: 1,
       steps: Object.fromEntries(plan.steps.map(s => [s.id, { status: 'pending' }])), messages: [], amendments: [], actions: {}, processes: {},
       budget: { activeMs: 0, tokens: 0, reservations: {}, uncertainTokens: 0, heartbeatReservedMs: 0 }, instructions: {}, skills: {} };
-    const store = new Store(dir, state, emit);
+    const store = new Store(realpathSync(dir), state, emit);
     writeFileSync(join(dir, 'plan.original.md'), plan.source, { mode: 0o600 });
     atomicJSON(join(dir, 'run.json'), { version: 1, id, created: state.created, target, config });
     store.save(); return store;
@@ -55,7 +56,7 @@ export class Store {
       }
       if (!state || state.version !== 1 || state.id !== id) throw new Error('Missing valid checkpoint');
     } catch (e) { throw new Stop('internal_error', 'state_corrupt', `Cannot recover ${id}: ${e}`); }
-    const store = new Store(dir, state, emit); store.seq = seq; return store;
+    const store = new Store(realpathSync(dir), state, emit); store.seq = seq; return store;
   }
   repairTail() {
     const path = join(this.dir, 'events.jsonl'); const data = readFileSync(path);

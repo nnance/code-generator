@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { parseArgs } from 'node:util';
 import { failure, exitCodes } from './errors.js';
+import { runtime } from './runtime.js';
 
 export const help = `Code Generator — autonomous implementation plans
 
@@ -34,7 +35,10 @@ export function args() {
 try {
   const input = args();
   if (input.values.help || !input.positionals.length) process.stdout.write(help);
-  else throw new Error('Execution controller is not implemented yet.');
+  else {
+    if (input.positionals.length > 2) throw new Error('Too many positional arguments. Use --instructions for resume text.');
+    process.exitCode = await runtime(input.positionals[0], input.positionals[1], input.values);
+  }
 } catch (e) {
   const err = failure(e); process.stderr.write(`${err.reason}: ${err.message}\n`); process.exitCode = exitCodes[err.category];
 }
