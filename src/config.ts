@@ -7,7 +7,7 @@ import { Stop } from './errors.js';
 export const configSchema = z.object({
   version: z.literal(1).default(1),
   baseURL: z.string().url().default('http://127.0.0.1:8001/v1'),
-  model: z.string().min(1).default('qwen3.6-35b-8bit'),
+  model: z.string().min(1).default('qwen3.8-27b-4bit'),
   apiKeyEnv: z.string().optional(),
   stateDir: z.string().default(resolve(homedir(), '.code-generator')),
   maxTimeMs: z.number().positive().nullable().default(3_600_000),

@@ -8,7 +8,7 @@ Designed for real coding tasks on a dedicated Mac Studio M3 Ultra using local op
 
 ## Local setup
 
-Requires Node.js 22 or newer and an already-running model server. The defaults target `http://127.0.0.1:8001/v1`, model `qwen3.6-35b-8bit`, a 262,144-token context window, and one hour of active execution.
+Requires Node.js 22 or newer and an already-running model server. The defaults target `http://127.0.0.1:8001/v1`, model `qwen3.8-27b-4bit`, a 262,144-token context window, and one hour of active execution.
 
 ```sh
 npm ci

@@ -13,7 +13,7 @@ The v1 CLI is implemented locally. The initial documents and each implementation
 | 4. Agent execution | `761989e` — SDK loop, amendments, caching, compaction, and independent acceptance verification. |
 | 5. Validation and packaging | Final milestone commit — extended live fixtures, recovery hardening, reports, configuration example, and local npx packaging. |
 
-## Verified environment
+## Original v1 validation environment
 
 - Node.js 26.4.0 on macOS; package declares Node.js >=22.
 - Rapid-MLX 0.12.18, as reported by server metrics.
@@ -58,3 +58,9 @@ Diagnostic run data stays in temporary fixture directories. `.test-artifacts/` c
 - The command denylist prevents common accidents; it is not a shell sandbox. Commits and pushes require explicit plan/amendment authorization.
 - Validation used representative local fixtures and the specified model/server. Additional models, large production repositories, and personal skill collections have not been certified by these tests.
 - The npm namespace is a local packaging choice, not a claim that a package has been published or that the namespace is available.
+
+## Current server configuration
+
+The default model is now `qwen3.8-27b-4bit` at the same port 8001. Its canonical server ID is `rapid-mlx/Qwen3.8-27B-4bit-MTP-MLX`; the advertised context remains 262144 tokens. The full v1 results above describe the original Qwen3.6 validation, not a full rerun on Qwen3.8.
+
+The live Qwen3.8 connectivity check passed: streaming native tool calls, input/output usage, and observed prefix-cache reuse. The TypeScript build also passed.

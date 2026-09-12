@@ -7,7 +7,7 @@ import { probe } from '../../dist/model.js';
 test('live rapid-mlx streams native tool calling and usage', { timeout: 180000 }, async () => {
   const config = loadConfig(undefined, {
     baseURL: process.env.RAPID_MLX_URL ?? 'http://127.0.0.1:8001/v1',
-    model: process.env.RAPID_MLX_MODEL ?? 'qwen3.6-35b-8bit',
+    model: process.env.RAPID_MLX_MODEL ?? 'qwen3.8-27b-4bit',
   });
   const result = await probe(config);
   const metrics = await (await fetch(new URL('/metrics', config.baseURL))).text();

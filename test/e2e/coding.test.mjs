@@ -22,7 +22,7 @@ export function fixture() {
   writeFileSync(join(repo, 'add.js'), 'export function add(a, b) { return a - b; }\n');
   writeFileSync(join(repo, 'add.test.js'), "import { test } from 'node:test';\nimport assert from 'node:assert/strict';\nimport { add } from './add.js';\ntest('adds positive and negative numbers', () => { assert.equal(add(2, 3), 5); assert.equal(add(-2, 3), 1); });\n");
   const plan = join(base, 'plan.md'); writeFileSync(plan, fixturePlan());
-  const config = join(base, 'config.json'); writeFileSync(config, JSON.stringify({ version: 1, stateDir: join(base, 'state'), baseURL: process.env.RAPID_MLX_URL ?? 'http://127.0.0.1:8001/v1', model: process.env.RAPID_MLX_MODEL ?? 'qwen3.6-35b-8bit', maxTimeMs: 180000, output: 'json' }));
+  const config = join(base, 'config.json'); writeFileSync(config, JSON.stringify({ version: 1, stateDir: join(base, 'state'), baseURL: process.env.RAPID_MLX_URL ?? 'http://127.0.0.1:8001/v1', model: process.env.RAPID_MLX_MODEL ?? 'qwen3.8-27b-4bit', maxTimeMs: 180000, output: 'json' }));
   return { base, repo, plan, config };
 }
 test('live agent fixes real code, verifies acceptance, and retains evidence', { timeout: 240000 }, async () => {
