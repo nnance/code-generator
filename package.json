@@ -12,6 +12,7 @@
     "PLAN_TEMPLATE.md",
     "PRODUCT_SPEC.md",
     "IMPLEMENTATION.md",
+    "BACKLOG.md",
     "config.example.json"
   ],
   "engines": {

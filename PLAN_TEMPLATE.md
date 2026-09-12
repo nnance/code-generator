@@ -2,7 +2,11 @@
 
 Plan format: 1
 
-<!-- Replace every angle-bracket placeholder before submission. Keep required
+<!-- This template defines the strict implementation plan contract. A person or
+another agent may author it; agent-assisted completeness and consistency checks
+are recommended. The CLI validates submitted plans before implementation and
+reports contract gaps. Passing validation does not replace final acceptance.
+Replace every angle-bracket placeholder before submission. Keep required
 headings and field labels. Duplicate Step/AC blocks as needed. This file is a
 template, not an executable plan until populated. -->
 

@@ -10,6 +10,16 @@ The first user is the project owner, running real coding tasks on a dedicated or
 
 Implementation: Node.js and TypeScript, runnable through `npx`. Use the Vercel AI SDK for model connectivity, streaming, tools, and its agent loop. Prefer Node built-ins; add dependencies only where they provide substantial value. The implementation repository is `genai/code-generator`.
 
+### Implementation plan contract and long-term direction
+
+The long-term goal is an implementation agent highly optimized for a specific, strictly defined plan contract and the model executing it. [PLAN_TEMPLATE.md](PLAN_TEMPLATE.md) is the authoritative authoring contract: its required structure, field meanings, step and acceptance references, scope constraints, and exit criteria define what a submitted plan must establish. The parser, semantic assessment, companion skill, and execution behavior must remain aligned with that contract as it evolves.
+
+Humans may author plans manually. Agent-assisted authoring is recommended because a directing agent can check contract completeness and consistency before submission, while retaining responsibility for discovery and design decisions. Every submitted plan receives the same validation regardless of its author; agent authorship does not itself establish correctness.
+
+Before implementation, validate both structural correctness and the plan's behavioral consistency. For gaps, report the affected section or step, the missing or conflicting requirement, and the clarification needed to make the plan executable. Do not silently fill in product decisions. A correctly defined runtime prerequisite check is different from an incomplete specification: inspection may reveal a blocker without invalidating the contract itself. Successful validation establishes executability, not a guarantee that the implementation will satisfy every check; completion still requires final acceptance evidence.
+
+Optimization should be measured against contract adherence and verified outcomes for the configured model. Tune prompts, tool use, output allowances, and verification using representative live tasks, recording the model and configuration with results. Preserve contract semantics and acceptance standards across model choices rather than weakening requirements to accommodate a model's errors. Current validation limitations are tracked in [BACKLOG.md](BACKLOG.md); this direction does not imply they are already resolved.
+
 ### Directing-agent and worker boundary
 
 The directing agent owns ideation, product and repository discovery before delegation, architecture, implementation plan generation, monitoring, resolution of intent or scope decisions, and final review. The worker owns repository inspection necessary to execute that plan, ordinary coding decisions, edits, prescribed checks, routine error repair, and durable evidence. It escalates material ambiguity or unavailable prerequisites by stopping with a precise explanation, rather than conducting open-ended discovery or choosing product requirements.

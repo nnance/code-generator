@@ -18,6 +18,12 @@ Built with Node.js, TypeScript, and the **Vercel AI SDK** for model connectivity
 
 The same plan-driven workflow supports each approach. Planning can happen in an editor, a conversation, or an automated system; execution uses a repeatable CLI interface.
 
+## A precise implementation contract
+
+The [planning template](PLAN_TEMPLATE.md) defines the agent's strict input contract: objective, scope, ordered steps, acceptance checks, and exit criteria. A free-form idea needs to be turned into that structure before execution. You can write the plan manually; having another agent author and check it is recommended for ensuring completeness and consistency.
+
+The CLI validates plans before implementation and reports gaps or conflicts that need clarification. Passing validation does not replace the final acceptance checks. The long-term goal is to optimize execution around this contract for the selected model, using verified outcomes to improve reliability. Known validation and reporting limitations are tracked in the [backlog](BACKLOG.md).
+
 ## Agent integration
 
 The [companion skill](skills/code-generator/SKILL.md) teaches a directing model to author plans, launch bounded runs, monitor JSON status, resolve blockers, resume, and review evidence. It ships in the npm tarball under `skills/code-generator/`. Load that file directly or copy the folder into your directing harness's skill directory. Keep access to the installed package's `PLAN_TEMPLATE.md`; the skill uses it as the authoritative plan format. No Codex-specific API or built-in orchestration service is required.

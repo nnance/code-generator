@@ -93,3 +93,6 @@ Run `8df91a00-6414-497d-a3dc-ac8de095a1ba` retained its ID through five attempts
 Cumulative usage was 276,282 ms active time and 112,602 tokens; limits remained 600,000 ms, no total token cap, and 16,384 output tokens per response. No managed processes remained. Full local evidence is retained under `/private/tmp/skill-director-u0fy57gy/`, including `validation-summary.json`, `greeting.diff`, saved stopped reports, and final inspect output.
 
 Two limitations remain: assessment treats a valid conditional prerequisite gate as ambiguity and can demand external file contents in the plan before permitting inspection; missing-file tool behavior was therefore not exercised. Also, this non-Git run's changed-path report included all target files after pre-execution stops, so scope was verified with baseline hashes and chronological write evidence. The validation proves a model-driven blocker/resume/review cycle, not reliable handling of every prerequisite or task complexity.
+
+
+The two model-directed validation limitations are tracked as [BL-001](BACKLOG.md#bl-001-distinguish-contract-gaps-from-runtime-prerequisites) and [BL-002](BACKLOG.md#bl-002-report-changed-paths-accurately-after-pre-execution-stops).
