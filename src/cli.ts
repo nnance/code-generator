@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { failure, exitCodes, Stop } from './errors.js';
 import { runtime } from './runtime.js';
@@ -19,6 +22,7 @@ Options:
   --model <id>          Served model identifier
   --output human|json  Streaming format (default human)
   --help               Show this help
+  --version            Print installed version and exit
 
 Resume retains consumed budgets; overrides replace totals, not remaining time.
 Exit codes: 0 success; 2 input; 3 blocker; 4 budget; 5 internal; 6 locked;
@@ -30,12 +34,17 @@ export function args() {
     target: { type: 'string' }, config: { type: 'string' }, instructions: { type: 'string' },
     'max-time': { type: 'string' }, 'max-tokens': { type: 'string' },
     'base-url': { type: 'string' }, model: { type: 'string' }, output: { type: 'string' },
+    version: { type: 'boolean' },
   } });
+}
+function version() {
+  return JSON.parse(readFileSync(join(fileURLToPath(new URL('..', import.meta.url)), 'package.json'), 'utf8')).version;
 }
 try {
   let input;
   try { input = args(); } catch (e) { throw new Stop('invalid_input', 'invalid_arguments', e instanceof Error ? e.message : String(e)); }
-  if (input.values.help || !input.positionals.length) process.stdout.write(help);
+  if (input.values.version) process.stdout.write(`${version()}\n`);
+  else if (input.values.help || !input.positionals.length) process.stdout.write(help);
   else {
     if (input.positionals.length > 2) throw new Stop('invalid_input', 'invalid_arguments', 'Too many positional arguments. Use --instructions for resume text.');
     process.exitCode = await runtime(input.positionals[0], input.positionals[1], input.values);
