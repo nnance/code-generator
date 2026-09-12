@@ -16,9 +16,10 @@ export async function probe(config: Config, fetcher?: typeof fetch, signal?: Abo
   const listing = await response.json() as { data?: { id: string; context_window?: number }[] };
   const found = listing.data?.find(m => m.id === config.model);
   if (!found) throw new Stop('blocked', 'model_unavailable', `Model ${config.model} is not listed by ${config.baseURL}`);
+  if (found.context_window && config.contextTokens > found.context_window) throw new Stop('invalid_input', 'context_exceeds_model', `Configured context ${config.contextTokens} exceeds model capacity ${found.context_window}. Set contextTokens in configuration.`);
   let called = false;
   const agent = new ToolLoopAgent({
-    model: model(config, fetcher), maxOutputTokens: 128, maxRetries: 0,
+    model: model(config, fetcher), maxOutputTokens: 128, maxRetries: 0, providerOptions: config.providerOptions,
     instructions: 'Call connectivity_check with value ready, then reply READY after its result. This is a harmless connectivity test.',
     tools: { connectivity_check: tool({ inputSchema: z.object({ value: z.literal('ready') }), execute: async () => { called = true; return { status: 'ready' }; } }) },
     stopWhen: isStepCount(2),

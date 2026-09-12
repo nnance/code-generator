@@ -4,8 +4,20 @@ import { execFileSync } from 'node:child_process';
 import { Store } from './state.js';
 import { hash } from './plan.js';
 import { Stop } from './errors.js';
+import { parseDocument } from 'yaml';
 
 export function within(root: string, path: string) { const rel = relative(root, path); return rel === '' || (!rel.startsWith('..' + sep) && rel !== '..' && !rel.startsWith(sep)); }
+export function globRegex(pattern: string) {
+  let result = '^';
+  for (let i = 0; i < pattern.length; i++) {
+    if (pattern.slice(i, i + 3) === '**/') { result += '(?:.*/)?'; i += 2; }
+    else if (pattern.slice(i, i + 2) === '**') { result += '.*'; i++; }
+    else if (pattern[i] === '*') result += '[^/]*';
+    else if (pattern[i] === '?') result += '[^/]';
+    else result += pattern[i].replace(/[.+^${}()|[\]\\]/g, '\\$&');
+  }
+  return new RegExp(result + '$');
+}
 export function targetPath(root: string, path: string, allowMissing = false) {
   const full = resolve(root, path); let check = full;
   if (allowMissing) while (!existsSync(check) && dirname(check) !== check) check = dirname(check);
@@ -36,7 +48,7 @@ export function instructions(store: Store, path = store.state.target) {
     const p = join(d, 'AGENTS.md'); if (!existsSync(p)) continue;
     targetPath(root, p); const content = readFileSync(p, 'utf8'); out.push({ path: relative(root, p), content });
     if (store.state.instructions[p] !== hash(content)) {
-      store.state.instructions[p] = hash(content); store.event('instructions', { path: p, content }); store.save();
+      store.state.instructions[p] = hash(content); (store.state.instructionContents ??= {})[p] = content; store.event('instructions', { path: p, content }); store.save();
     }
   }
   return out;
@@ -47,11 +59,12 @@ export function skills(root: string): Skill[] {
   targetPath(root, dir);
   const result: Skill[] = [];
   for (const file of files(dir, new Set())) {
-    if (!file.endsWith('SKILL.md')) continue;
+    if (file.split(sep).at(-1) !== 'SKILL.md') continue;
     const path = join(dir, file); const source = readFileSync(path, 'utf8'); const front = source.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1];
-    const field = (key: string) => front?.match(new RegExp(`^${key}:\\s*(.+)$`, 'm'))?.[1].replace(/^["']|["']$/g, '').trim();
-    const name = field('name'), description = field('description');
-    if (!name || !description || /^[>|]/.test(description)) throw new Stop('invalid_input', 'invalid_skill', `Skill ${path} requires single-line name and description metadata.`);
+    const doc = parseDocument(front ?? '');
+    const metadata = doc.toJS({ maxAliasCount: 20 });
+    const name = metadata?.name, description = metadata?.description;
+    if (doc.errors.length || typeof name !== 'string' || !name.trim() || typeof description !== 'string' || !description.trim()) throw new Stop('invalid_input', 'invalid_skill', `Skill ${path} requires valid name and description metadata.`);
     if (result.some(s => s.name === name)) throw new Stop('invalid_input', 'duplicate_skill', `Duplicate skill name: ${name}`);
     result.push({ name, description, path });
   }

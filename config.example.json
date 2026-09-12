@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "baseURL": "http://127.0.0.1:8001/v1",
+  "model": "qwen3.6-35b-8bit",
+  "contextTokens": 262144,
+  "maxOutputTokens": 4096,
+  "maxTimeMs": 3600000,
+  "maxTokens": null,
+  "stateDir": "~/.code-generator",
+  "output": "human",
+  "commandTimeoutMs": 120000,
+  "apiTimeoutMs": 300000,
+  "shutdownGraceMs": 5000,
+  "retries": 2,
+  "noProgressLimit": 3,
+  "compactionThreshold": 0.8,
+  "denylist": []
+}

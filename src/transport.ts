@@ -13,7 +13,9 @@ export function transport(store: Store, budget: Budget): typeof fetch {
     const address = String(url); const c = store.state.config;
     const signal = AbortSignal.any([budget.controller.signal, AbortSignal.timeout(c.apiTimeoutMs), ...(options?.signal ? [options.signal] : [])]);
     if (!address.endsWith('/chat/completions')) {
-      const response = await fetch(url, { ...options, signal });
+      let response: Response;
+      try { response = await fetch(url, { ...options, signal }); }
+      catch (e) { if (signal.aborted) throw signal.reason; throw new Stop('blocked', 'provider_unavailable', `Cannot reach ${address}: ${e instanceof Error ? e.message : e}`); }
       if (address.endsWith('/models') && response.ok) {
         const data = await response.clone().json() as { data?: { id: string; context_window?: number; max_model_len?: number }[] };
         const entry = data.data?.find(m => m.id === c.model); inputBound = entry?.max_model_len ?? entry?.context_window;

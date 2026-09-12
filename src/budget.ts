@@ -18,7 +18,7 @@ export class Budget {
     const max = this.store.state.config.maxTimeMs;
     if (max !== null) this.deadline = setTimeout(() => this.controller.abort(new Stop('budget_exhausted', 'time_limit', 'Active-time allowance exhausted. Increase the total with --max-time to resume.')), Math.min(max - b.activeMs, 2147483647));
   }
-  tick() { const now = performance.now(); const b = this.store.state.budget; b.activeMs += now - this.last; this.last = now; b.heartbeatReservedMs = 1000; this.store.save(); }
+  tick() { const now = performance.now(); const b = this.store.state.budget; b.activeMs += now - this.last; this.last = now; b.heartbeatReservedMs = 1000; this.store.saveBudget(); }
   check() {
     if (this.controller.signal.aborted) throw this.controller.signal.reason;
     const { config: c, budget: b } = this.store.state;

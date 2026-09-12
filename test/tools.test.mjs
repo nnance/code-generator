@@ -5,7 +5,13 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { loadConfig } from '../dist/config.js';
 import { checkCommand } from '../dist/policy.js';
-import { skills, targetPath } from '../dist/repository.js';
+import { skills, targetPath, globRegex } from '../dist/repository.js';
+
+test('recursive globs include both root files and nested files', () => {
+  assert.ok(globRegex('**/*.js').test('add.js'));
+  assert.ok(globRegex('**/*.js').test('src/add.js'));
+  assert.ok(!globRegex('*.js').test('src/add.js'));
+});
 
 test('denylist catches destructive variants and requires delivery authorization', () => {
   const c = loadConfig();

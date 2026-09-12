@@ -22,7 +22,7 @@ export const configSchema = z.object({
   noProgressLimit: z.number().int().min(1).default(3),
   output: z.enum(['human', 'json']).default('human'),
   denylist: z.array(z.object({ id: z.string().min(1), pattern: z.string().min(1), reason: z.string().min(1) })).default([]),
-  providerOptions: z.record(z.string(), z.record(z.string(), z.unknown())).default({}),
+  providerOptions: z.record(z.string(), z.record(z.string(), z.json())).default({}),
 }).strict().superRefine((c, ctx) => {
   if (c.maxTimeMs === null && c.maxTokens === null) ctx.addIssue({ code: 'custom', message: 'At least one finite time or token limit is required.' });
   if (c.maxOutputTokens >= c.contextTokens) ctx.addIssue({ code: 'custom', message: 'Output allowance must be smaller than model context.' });

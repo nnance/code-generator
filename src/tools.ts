@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { Store } from './state.js';
 import { Budget } from './budget.js';
 import { Processes } from './processes.js';
-import { targetPath, files, instructions, skills, within } from './repository.js';
+import { targetPath, files, instructions, skills, within, gitState, globRegex } from './repository.js';
 import { hash } from './plan.js';
 import { checkCommand } from './policy.js';
 import { Stop } from './errors.js';
@@ -21,8 +21,12 @@ export class CodingTools {
       const a = this.store.intent(name, input);
       try { const output = await fn(a.id); this.store.complete(a, output); return { actionId: a.id, ...output }; }
       catch (e) {
-        if ((name === 'shell' || name === 'write') && this.budget.controller.signal.aborted) { a.error = String(e); this.store.save(); }
-        else this.store.fail(a, e);
+        const uncertainShell = name === 'shell' && existsSync(join(this.store.dir, 'artifacts', a.id + '.start')) && !existsSync(this.store.state.processes[a.id]?.resultFile ?? '');
+        const uncertainWrite = name === 'write' && !String(e).includes('File changed or expectedHash missing');
+        if (uncertainShell || uncertainWrite) {
+          a.error = String(e); this.store.save();
+          if (!this.budget.controller.signal.aborted) this.budget.controller.abort(e instanceof Stop ? e : new Stop('internal_error', 'action_interrupted', `Action ${a.id} did not finish reliably: ${e}`));
+        } else this.store.fail(a, e);
         if (e instanceof Stop) { this.stop = e; this.budget.controller.abort(e); } throw e;
       }
     };
@@ -33,7 +37,9 @@ export class CodingTools {
     const dir = targetPath(this.store.state.target, cwd);
     return this.action('shell', { command, cwd: dir, background }, async id => {
       checkCommand(command, this.store.state.config, [this.store.state.plan.source, ...this.store.state.amendments.map(a => a.text)].join('\n'));
+      const known = { ...this.store.state.instructions };
       const guidance = this.guidance(dir);
+      if (guidance.some(g => known[join(this.store.state.target, g.path)] !== hash(g.content))) return { executed: false, reason: 'Review newly discovered scoped instructions, then retry.', instructions: guidance };
       const result = await this.processes.start(id, command, dir, background, timeout ?? this.store.state.config.commandTimeoutMs);
       return { ...result, instructions: guidance };
     });
@@ -48,7 +54,7 @@ export class CodingTools {
         const lines = text.split('\n'); return { path: p, hash: hash(text), totalLines: lines.length, content: lines.slice(input.start - 1, input.start - 1 + input.lines).map((l, i) => `${input.start + i}: ${l}`).join('\n'), instructions: artifact ? [] : this.guidance(p) };
       }) }),
       list: tool({ description: 'List repository files, optionally filter with a glob (*, **, ?).', inputSchema: z.object({ glob: z.string().default('**'), offset: z.number().int().min(0).default(0) }), execute: input => this.action('list', input, () => {
-        const re = new RegExp('^' + input.glob.split('**').map(s => s.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*').replace(/\?/g, '.')).join('.*') + '$');
+        const re = globRegex(input.glob);
         const paths = files(root).filter(p => re.test(p)); return { paths: paths.slice(input.offset, input.offset + 500), total: paths.length, instructions: this.guidance(root) };
       }) }),
       grep: tool({ description: 'Search repository text using a literal or regular expression. Returns file and line references.', inputSchema: z.object({ pattern: z.string(), regex: z.boolean().default(false), pathIncludes: z.string().default(''), offset: z.number().int().min(0).default(0) }), execute: input => this.action('grep', input, () => {
@@ -64,7 +70,9 @@ export class CodingTools {
         return this.action('write', { ...input, path: p, beforeHash: before, afterHash: hash(input.content) }, () => {
           const current = existsSync(p) ? hash(readFileSync(p)) : null;
           if (current !== input.expectedHash) throw new Error('File changed or expectedHash missing. Read it again before writing.');
-          const guidance = this.guidance(p); mkdirSync(dirname(p), { recursive: true }); writeFileSync(p, input.content);
+          const known = { ...this.store.state.instructions }; const guidance = this.guidance(p);
+          if (guidance.some(g => known[join(root, g.path)] !== hash(g.content))) return { written: false, reason: 'Review newly discovered scoped instructions, then retry.', instructions: guidance };
+          mkdirSync(dirname(p), { recursive: true }); writeFileSync(p, input.content);
           return { path: p, hash: hash(input.content), instructions: guidance };
         });
       } }),
@@ -75,7 +83,7 @@ export class CodingTools {
       }) }),
       load_skill: tool({ description: 'Load a repository skill by its discovered name.', inputSchema: z.object({ name: z.string() }), execute: i => this.action('load_skill', i, () => {
         const skill = skills(root).find(s => s.name === i.name); if (!skill) throw new Error('Unknown skill');
-        const content = readFileSync(skill.path, 'utf8'); this.store.state.skills[skill.path] = hash(content); return { ...skill, content };
+        const content = readFileSync(skill.path, 'utf8'); this.store.state.skills[skill.path] = hash(content); (this.store.state.skillContents ??= {})[skill.path] = content; return { ...skill, content };
       }) }),
       progress: tool({ description: 'Record step status using its ID (for example S1, not its title) and evidence action IDs. Completed steps must reference successful prior tool actions.', inputSchema: z.object({ step: z.enum(Object.keys(this.store.state.steps) as [string, ...string[]]), status: z.enum(['in_progress', 'completed', 'blocked']), explanation: z.string().min(1), actions: z.array(z.string()) }), execute: i => this.action('progress', i, () => {
         const step = this.store.state.steps[i.step]; if (!step) throw new Error('Unknown plan step');
@@ -93,6 +101,10 @@ export class CodingTools {
         const current = existsSync(input.path) ? hash(readFileSync(input.path)) : null;
         if (current === input.afterHash) { this.store.complete(a, { recovered: true, path: input.path, hash: current }); continue; }
         if (current === input.beforeHash) { this.store.fail(a, 'Interrupted before write; unchanged file. Safe to retry.'); continue; }
+      } else if (a.name === 'worktree') {
+        const git = existsSync(input.path) ? gitState(input.path) : undefined;
+        if (git?.branch === `code-generator/${this.store.state.id}`) { this.store.state.target = input.path; this.store.complete(a, { recovered: true, path: input.path }); continue; }
+        if (!existsSync(input.path)) { this.store.fail(a, 'Worktree was not created; prepare one or restart with --worktree.'); continue; }
       } else if (a.name === 'shell') {
         const record = this.store.state.processes[a.id];
         if (record && existsSync(record.resultFile)) { this.store.complete(a, this.processes.result(record)); continue; }

@@ -18,7 +18,7 @@ export function resolveActions(store: Store, text: string) {
 export async function amend(store: Store, budget: Budget, fetcher: typeof fetch, text: string) {
   let updated: Plan | undefined;
   const previous = store.state.plan;
-  const agent = new ToolLoopAgent({ model: model(store.state.config, fetcher), maxRetries: 0, maxOutputTokens: Math.max(4096, store.state.config.maxOutputTokens),
+  const agent = new ToolLoopAgent({ model: model(store.state.config, fetcher), maxRetries: 0, providerOptions: store.state.config.providerOptions, maxOutputTokens: store.state.config.maxOutputTokens,
     instructions: 'Apply only the explicit user amendment to the existing Markdown implementation plan. Keep required headings/labels and stable IDs. Preserve all unaffected requirements. Never weaken acceptance criteria without an explicit request about those checks. Return the complete revised plan through save_plan. If the amendment only resolves an action or says to continue, preserve the plan exactly.',
     tools: { save_plan: tool({ inputSchema: z.object({ markdown: z.string() }), execute: async i => {
       const plan = parsePlan(i.markdown);

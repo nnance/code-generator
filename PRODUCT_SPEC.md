@@ -1,6 +1,6 @@
 # Code Generator — Product Specification
 
-Status: v1 product baseline from requirements discussion. Implementation has not started.
+Status: v1 product baseline. The local CLI is implemented; see [IMPLEMENTATION.md](IMPLEMENTATION.md) for milestone and validation results.
 
 ## 1. Purpose and user
 
@@ -273,4 +273,4 @@ Use disposable fixture repositories and harmless local Git remotes for tests. Fa
 4. Integrate the SDK loop, progressive context, caching, compaction, and final completion gate.
 5. Add reports, JSON events, live E2E fixtures, and `npx` packaging verification.
 
-No product-scope question remains blocking this spec. Implementation setup still needs the actual rapid-mlx endpoint, served model/context capacity, user budget defaults, and a sample from the existing skill collection. npm publishing identity is deferred until distribution. Do not invent these operational values or claim that a live integration test has already run.
+Confirmed setup: rapid-mlx at `http://127.0.0.1:8001/v1`, model `qwen3.6-35b-8bit`, advertised context capacity 262144 tokens, and a one-hour active-time default. Live integration results are recorded in IMPLEMENTATION.md. The package uses `@nicknance/code-generator` locally; npm publishing and namespace availability remain unverified. Existing personal skill collections can be tried through repository-local `.agents/skills`; the automated suite validates representative skill fixtures.

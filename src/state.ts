@@ -19,6 +19,9 @@ export interface RunState {
   initialGit?: unknown; instructions: Record<string, string>; skills: Record<string, string>;
   reason?: { code: string; message: string }; initialFiles?: Record<string, string>;
   owner?: { pid: number; identity?: string };
+  verification?: unknown;
+  instructionContents?: Record<string, string>;
+  skillContents?: Record<string, string>;
 }
 export function atomicJSON(path: string, value: unknown) {
   const tmp = `${path}.${randomUUID()}.tmp`;
@@ -53,6 +56,7 @@ export class Store {
         const event = JSON.parse(line);
         if (event.version !== 1 || event.sequence !== ++seq || event.runId !== id) throw new Error('Journal sequence/version mismatch');
         if (event.type === 'checkpoint') state = event.payload;
+        else if (event.type === 'budget_checkpoint' && state) state.budget = event.payload;
       }
       if (!state || state.version !== 1 || state.id !== id) throw new Error('Missing valid checkpoint');
     } catch (e) { throw new Stop('internal_error', 'state_corrupt', `Cannot recover ${id}: ${e}`); }
@@ -73,6 +77,7 @@ export class Store {
     if (visible) this.emit?.(event); return event.sequence;
   }
   save() { this.event('checkpoint', this.state, false); atomicJSON(join(this.dir, 'checkpoint.json'), this.state); }
+  saveBudget() { this.event('budget_checkpoint', this.state.budget, false); }
   artifact(name: string, value: unknown) {
     const path = join(this.dir, 'artifacts', `${name}-${randomUUID()}.json`); atomicJSON(path, value); return path;
   }

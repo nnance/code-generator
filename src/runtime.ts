@@ -1,8 +1,8 @@
-import { readFileSync, realpathSync, statSync, mkdirSync, writeFileSync } from 'node:fs';
+import { readFileSync, realpathSync, statSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { loadConfig, duration, type Config } from './config.js';
-import { parsePlan } from './plan.js';
+import { parsePlan, hash } from './plan.js';
 import { Store, atomicJSON } from './state.js';
 import { lock, alive, identity } from './locks.js';
 import { Budget } from './budget.js';
@@ -10,9 +10,10 @@ import { probe } from './model.js';
 import { transport } from './transport.js';
 import { CodingTools } from './tools.js';
 import { executeAgent } from './agent.js';
-import { gitState, fileSnapshot, skills, instructions, within } from './repository.js';
+import { gitState, fileSnapshot, skills, instructions, within, targetPath } from './repository.js';
 import { failure, exitCodes, Stop } from './errors.js';
 import { amend, resolveActions } from './amend.js';
+import { assess } from './assess.js';
 
 export interface Options { config?: string; target?: string; worktree?: boolean; instructions?: string; 'max-time'?: string; 'max-tokens'?: string; 'base-url'?: string; model?: string; output?: string; json?: boolean; }
 function overrides(o: Options) {
@@ -75,18 +76,34 @@ export async function runtime(command: string, argument: string | undefined, opt
     store.event(command === 'resume' ? 'run_resume' : 'run_start', { id: store.state.id, target: store.state.target });
     if (command === 'resume') {
       if (options.instructions) resolveActions(store, options.instructions);
+      const previousTarget = store.state.target;
       await coding.recover();
+      if (store.state.target !== previousTarget) { store.state.target = realpathSync(store.state.target); worktreeRelease = lock(store.state.config.stateDir, store.state.target, store.state.id); release(); }
+      instructions(store);
+      for (const p of Object.keys(store.state.instructions)) {
+        if (existsSync(p)) instructions(store, p);
+        else { delete store.state.instructions[p]; delete store.state.instructionContents?.[p]; store.event('instructions_removed', { path: p }); }
+      }
+      for (const p of Object.keys(store.state.skills)) {
+        if (existsSync(p)) {
+          const checked = targetPath(store.state.target, p);
+          if (!within(join(store.state.target, '.agents/skills'), checked)) throw new Stop('invalid_input', 'skill_escape', 'Loaded skill escaped .agents/skills');
+          const content = readFileSync(checked, 'utf8'); store.state.skills[p] = hash(content); (store.state.skillContents ??= {})[p] = content;
+        }
+        else { delete store.state.skills[p]; delete store.state.skillContents?.[p]; }
+      }
       if (options.instructions) {
         store.state.amendments.push({ text: options.instructions, time: new Date().toISOString() });
         store.state.messages.push({ role: 'user', content: `Explicit resume amendment: ${options.instructions}\nReassess all affected work and record fresh evidence. Do not relax acceptance criteria unless explicitly directed.` });
         store.event('amendment', store.state.amendments.at(-1));
       }
-      store.state.messages.push({ role: 'user', content: `Resume recovered state: ${JSON.stringify({ steps: store.state.steps, actions: Object.values(store.state.actions).slice(-20), instructions: instructions(store), skills: skills(store.state.target) })}` });
+      store.state.messages.push({ role: 'user', content: `Resume recovered state (these instructions supersede older snapshots): ${JSON.stringify({ steps: store.state.steps, actions: Object.values(store.state.actions).slice(-20), instructions: store.state.instructionContents, loadedSkills: store.state.skillContents, skills: skills(store.state.target) })}` });
     }
     store.save();
     const fetcher = transport(store, budget); const capabilities = await probe(store.state.config, fetcher, budget.controller.signal);
     store.event('preflight', { model: capabilities.model, usage: capabilities.usage });
     if (command === 'resume' && options.instructions) await amend(store, budget, fetcher, options.instructions);
+    await assess(store, budget, fetcher);
     if (options.worktree) {
       const git = gitState(store.state.target);
       if (!git || git.status.trim()) throw new Stop('invalid_input', 'worktree_requires_clean_git', 'Worktree mode requires a clean Git checkout with a commit.');
@@ -107,7 +124,7 @@ export async function runtime(command: string, argument: string | undefined, opt
     store.save();
     const current = fileSnapshot(store.state.target);
     const changes = [...new Set([...Object.keys(store.state.initialFiles ?? {}), ...Object.keys(current)])].filter(p => store.state.initialFiles?.[p] !== current[p]);
-    const report = { id: store.state.id, status: store.state.status, target: store.state.target, reason: store.state.reason, steps: store.state.steps, budget: store.state.budget, git: gitState(store.state.target), changes, artifacts: store.dir,
+    const report = { id: store.state.id, status: store.state.status, target: store.state.target, reason: store.state.reason, steps: store.state.steps, budget: store.state.budget, verification: store.state.verification, git: gitState(store.state.target), changes, artifacts: store.dir,
       resume: store.state.status === 'succeeded' ? undefined : `code-generator resume ${store.state.id}`, pending: Object.values(store.state.actions).filter(a => a.status === 'pending') };
     atomicJSON(join(store.dir, 'report.json'), report);
     writeFileSync(join(store.dir, 'report.md'), `# Run ${report.id}\n\nStatus: ${report.status}\n\n${report.reason?.message ?? 'All acceptance criteria passed.'}\n\n## Steps\n\n${Object.entries(report.steps).map(([id, s]) => `- ${id}: ${s.status}${s.evidence ? ' — ' + s.evidence.explanation : ''}`).join('\n')}\n\n## Changed paths\n\n${changes.map(p => '- ' + p).join('\n') || 'None'}\n\nActive time: ${Math.round(report.budget.activeMs)} ms. Tokens: ${report.budget.tokens} (${report.budget.uncertainTokens} uncertain).\n\nArtifacts: ${report.artifacts}\n\n${report.resume ? 'Resume: `' + report.resume + '`\n' : ''}`, { mode: 0o600 });
