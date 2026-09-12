@@ -82,3 +82,14 @@ node --test test/e2e/delegation.test.mjs
 ```
 
 Local run evidence is indexed by `.test-artifacts/delegation.json` (ignored by Git); the temporary central state retains full reports and model/tool output. All model calls used the actual server, with no mock or replay.
+
+
+## Model-directed skill validation (2026-09-12)
+
+An independent directing model read `skills/code-generator/SKILL.md`, authored a fresh greeting implementation plan, launched and monitored the actual CLI, interpreted blockers, supplied explicit resume amendments, and reviewed the delivered code. It did not use the scripted delegation test. The worker used live rapid-mlx with `qwen3.8-27b-4bit`; the parent supplied the external contract only after the prerequisite stop.
+
+Run `8df91a00-6414-497d-a3dc-ac8de095a1ba` retained its ID through five attempts: a sandbox connectivity stop, three assessment stops, and successful implementation after the director quoted the verified contract. Both steps completed, terminal exit was 0, and the original/final acceptance sections were identical. Successful contract read event 296 preceded the sole code write at events 318/320; final verification and success were recorded at 543/546. Independent checks passed, and baseline hashes confirmed preserved checks, package metadata, and external contract. Only `greeting.js` was edited by the worker.
+
+Cumulative usage was 276,282 ms active time and 112,602 tokens; limits remained 600,000 ms, no total token cap, and 16,384 output tokens per response. No managed processes remained. Full local evidence is retained under `/private/tmp/skill-director-u0fy57gy/`, including `validation-summary.json`, `greeting.diff`, saved stopped reports, and final inspect output.
+
+Two limitations remain: assessment treats a valid conditional prerequisite gate as ambiguity and can demand external file contents in the plan before permitting inspection; missing-file tool behavior was therefore not exercised. Also, this non-Git run's changed-path report included all target files after pre-execution stops, so scope was verified with baseline hashes and chronological write evidence. The validation proves a model-driven blocker/resume/review cycle, not reliable handling of every prerequisite or task complexity.
